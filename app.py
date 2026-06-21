@@ -1,34 +1,43 @@
 import streamlit as st
-import sqlite3
-from datetime import date
+from supabase import create_client
 
-conn = sqlite3.connect("journal.db")
-c = conn.cursor()
+# Connect to Supabase
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
 
-c.execute("""
-CREATE TABLE IF NOT EXISTS journal(
-    id INTEGER PRIMARY KEY,
-    entry_date TEXT,
-    mood TEXT,
-    text TEXT
-)
-""")
+supabase = create_client(url, key)
 
 st.title("My Journal")
 
-mood = st.selectbox("Mood", ["Happy","Neutral","Sad","Angry"])
+mood = st.selectbox(
+    "Mood",
+    ["Happy", "Neutral", "Sad", "Angry"]
+)
+
 entry = st.text_area("Write here")
 
 if st.button("Save"):
-    c.execute(
-        "INSERT INTO journal(entry_date,mood,text) VALUES(?,?,?)",
-        (str(date.today()), mood, entry)
-    )
-    conn.commit()
-    st.success("Saved!")
+    if entry.strip():
+        supabase.table("journal").insert({
+            "mood": mood,
+            "entry": entry
+        }).execute()
 
-data = c.execute("SELECT * FROM journal ORDER BY id DESC").fetchall()
+        st.success("Saved!")
+    else:
+        st.warning("Please write something first.")
 
-for row in data:
-    st.write(row[1], row[2])
-    st.write(row[3])
+# Load entries
+response = (
+    supabase.table("journal")
+    .select("*")
+    .order("created_at", desc=True)
+    .execute()
+)
+
+st.subheader("Previous Entries")
+
+for row in response.data:
+    st.write(f"📅 {row['created_at'][:10]} | 😊 {row['mood']}")
+    st.write(row["entry"])
+    st.divider()
