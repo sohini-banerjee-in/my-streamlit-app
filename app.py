@@ -8,6 +8,36 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.title("My Journal")
+auth_mode = st.sidebar.radio(
+    "Account",
+    ["Login", "Sign Up"]
+)
+
+email = st.sidebar.text_input("Email")
+password = st.sidebar.text_input("Password", type="password")
+
+if auth_mode == "Sign Up":
+    if st.sidebar.button("Create Account"):
+        try:
+            supabase.auth.sign_up({
+                "email": email,
+                "password": password
+            })
+            st.sidebar.success("Account created!")
+        except Exception as e:
+            st.sidebar.error(str(e))
+
+if auth_mode == "Login":
+    if st.sidebar.button("Login"):
+        try:
+            result = supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            st.session_state["user"] = result.user
+            st.sidebar.success("Logged in!")
+        except Exception as e:
+            st.sidebar.error(str(e))
 
 mood = st.selectbox(
     "Mood",
